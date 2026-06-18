@@ -1,0 +1,2 @@
+# Allow GitHub Pages to serve files with leading underscores and dots
+# Required for Vite/SPA builds
