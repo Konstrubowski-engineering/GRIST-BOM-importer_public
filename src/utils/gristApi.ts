@@ -449,10 +449,24 @@ export async function syncToGrist(
   // ========================================================================
   // STEP 2: Create missing parts in BOM_CAD (global library)
   // ========================================================================
-  // Nodes without gristId don't exist in BOM_CAD
-  const partsToCreateInCad = selectedNodes.filter(
-    n => n.status !== 'Usunięty' && n.action === 'create' && n.gristId === undefined
-  );
+  // Nodes without gristId don't exist in BOM_CAD.
+  // IMPORTANT: Deduplicate by Part_Number — the same part can appear multiple times
+  // in the XLSX tree (same PN under different parent assemblies), producing multiple
+  // BOMNode objects. Without dedup, each would trigger a separate BOM_CAD insert
+  // creating duplicates.
+  const _seenPNsForCad = new Set<string>();
+  const partsToCreateInCad = selectedNodes.filter(n => {
+    if (n.status === 'Usunięty' || n.action !== 'create' || n.gristId !== undefined) {
+      return false;
+    }
+    const normalized = n.partNumber.toString().trim().toUpperCase();
+    if (_seenPNsForCad.has(normalized)) {
+      console.warn('[GRIST-BOM] Skipping duplicate BOM_CAD insert for PN (already queued):', n.partNumber);
+      return false;
+    }
+    _seenPNsForCad.add(normalized);
+    return true;
+  });
 
   console.warn('[GRIST-BOM] Parts to create in BOM_CAD:', partsToCreateInCad.length);
 

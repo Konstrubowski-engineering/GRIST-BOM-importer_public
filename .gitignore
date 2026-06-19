@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+Projekty.grist
+inspect_db.py
+00418-BOM.xlsx
+bug_notes.md

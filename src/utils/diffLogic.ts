@@ -125,6 +125,13 @@ export function calculateDiff(
   // ========================================================================
   // Handle Soft Deletions: Items in Grist but NOT in XLSX
   // ========================================================================
+  // Clear any phantom 'delete' nodes from previous diff runs to prevent
+  // them from accumulating on repeated refreshActions() calls (since
+  // fileData and tree share the same object references).
+  for (const node of flatNodes) {
+    node.children = node.children.filter(c => c.action !== 'delete');
+  }
+
   const allExcelParts = new Set(flatNodes.map(n => n.partNumber.toString().trim().toUpperCase()));
   
   for (const [parentPN, childrenMap] of structMap.entries()) {

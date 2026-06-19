@@ -318,7 +318,7 @@ const processFile = async (file: File) => {
       console.warn('[GRIST-BOM] Warnings:', result.validation.warnings);
     }
     
-    fileData.value = result.nodes; // Store for refresh
+    fileData.value = JSON.parse(JSON.stringify(result.nodes)); // deep copy — calculateDiff mutates nodes in-place
     
     // 2. Fetch Grist Data (we don't need to store it, refreshActions will fetch fresh data)
     
