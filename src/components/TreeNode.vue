@@ -14,6 +14,7 @@
       </div>
       <div class="col-item">{{ node.item }}</div>
       <div class="col-part">{{ node.partNumber }}</div>
+      <div class="col-bom-struct">{{ node.bomStructure }}</div>
       <div class="col-qty">{{ node.qty }}</div>
       <div class="col-desc">{{ node.description }}</div>
       <div class="col-stock">{{ node.rawData.Stock_Number || node.rawData['Stock Number'] || '' }}</div>
@@ -126,6 +127,7 @@ const actionClass = computed(() => {
 .col-check { width: 40px; text-align: center; min-width: 40px; }
 .col-item { width: 120px; font-weight: 500; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 120px; }
 .col-part { width: 180px; font-family: monospace; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 180px; }
+.col-bom-struct { width: 130px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 130px; }
 .col-qty { width: 80px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; min-width: 80px; }
 .col-desc { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; min-width: 250px; }
 .col-stock { width: 150px; text-align: left; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 150px; }

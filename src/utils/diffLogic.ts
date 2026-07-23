@@ -108,15 +108,18 @@ export function calculateDiff(
         node.gristId = cadRecord.id;
         node.gristStructureId = structRecord.id;
         
-        // Check if QTY or Status changed
-        if (structRecord.QTY != node.qty || structRecord.Status_czesci === 'Usunięty') {
+        // Check if QTY, Status, or BOM_Structure changed
+        const existingBomStruct = structRecord.BOM_Structure || cadRecord.BOM_Structure || '';
+        const bomStructChanged = existingBomStruct !== node.bomStructure;
+        
+        if (structRecord.QTY != node.qty || structRecord.Status_czesci === 'Usunięty' || bomStructChanged) {
           node.action = 'update';
           node.status = 'Aktywny';
-          console.warn('[GRIST-BOM] Node structure exists but QTY/Status changed:', node.partNumber, 'QTY:', structRecord.QTY, 'vs', node.qty, '→ action: update');
+          console.warn('[GRIST-BOM] Node structure exists but QTY/Status/BOM_Structure changed:', node.partNumber, 'QTY:', structRecord.QTY, 'vs', node.qty, 'BOM_Struct:', existingBomStruct, 'vs', node.bomStructure, '→ action: update');
         } else {
           node.action = 'none';
           node.status = 'Aktywny';
-          console.warn('[GRIST-BOM] Node structure exists with same QTY:', node.partNumber, '→ action: none');
+          console.warn('[GRIST-BOM] Node structure exists with same QTY/BOM_Structure:', node.partNumber, '→ action: none');
         }
       }
     }
@@ -150,6 +153,7 @@ export function calculateDiff(
           partNumber: childPN,
           qty: structRecord.QTY,
           description: cadRecord ? cadRecord.Description : 'Usunięty (nie w XLSX)',
+          bomStructure: structRecord.BOM_Structure || (cadRecord ? cadRecord.BOM_Structure : '') || '',
           rawData: {} as any,
           children: [],
           parentItem: null,

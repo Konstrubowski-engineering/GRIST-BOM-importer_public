@@ -70,6 +70,7 @@
             <div class="col-check">✔</div>
             <div class="col-item">Item</div>
             <div class="col-part">Part Number</div>
+            <div class="col-bom-struct">BOM Structure</div>
             <div class="col-qty">QTY</div>
             <div class="col-desc">Description</div>
             <div class="col-stock">Stock Number</div>
@@ -609,7 +610,7 @@ body, html {
   position: sticky;
   top: 0;
   z-index: 10;
-  min-width: 1620px;
+  min-width: 1750px;
   width: 100%;
 }
 
@@ -627,7 +628,7 @@ body, html {
 }
 
 .tree-body {
-  min-width: 1620px;
+  min-width: 1750px;
   width: 100%;
 }
 
@@ -643,6 +644,7 @@ body, html {
 .col-check { width: 40px; text-align: center; min-width: 40px; }
 .col-item { width: 120px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 120px; }
 .col-part { width: 180px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 180px; }
+.col-bom-struct { width: 130px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 130px; }
 .col-qty { width: 80px; text-align: right; white-space: nowrap; min-width: 80px; }
 .col-desc { flex: 1; text-align: left; min-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .col-stock { width: 150px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 150px; }

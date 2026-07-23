@@ -12,6 +12,7 @@ export interface BOMRow {
   Mass: string;
   Vendor: string;
   Producent: string;
+  BOM_Structure?: string;
   [key: string]: any;
 }
 
@@ -20,6 +21,7 @@ export interface BOMNode {
   partNumber: string;
   qty: number | string;
   description: string;
+  bomStructure: string;
   rawData: BOMRow;
   children: BOMNode[];
   parentItem: string | null;
@@ -198,6 +200,8 @@ export async function parseBOMFile(file: File): Promise<{ nodes: BOMNode[]; vali
       }
     }
 
+    const bomStructure = getField('BOM Structure') || getField('BOM_Structure') || getField('BOMStructure');
+
     return {
       Item: getField('Item'),
       PartNumber: getField('Part Number'),
@@ -210,6 +214,7 @@ export async function parseBOMFile(file: File): Promise<{ nodes: BOMNode[]; vali
       Mass: getField('Mass'),
       Vendor: getField('Vendor'),
       Producent: getField('Producent') || getField('Manufacturer'),
+      BOM_Structure: bomStructure,
       ...standardizedRow
     };
   }).filter(r => r.Item && r.PartNumber); // Skip empty rows
@@ -243,6 +248,7 @@ function buildTree(rows: BOMRow[]): BOMNode[] {
       partNumber: row.PartNumber.trim(),
       qty: row.QTY,
       description: row.Description.trim(),
+      bomStructure: (row.BOM_Structure || '').trim(),
       rawData: row,
       children: [],
       parentItem: null,

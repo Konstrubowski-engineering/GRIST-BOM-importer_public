@@ -16,6 +16,7 @@ export interface GristBOMCADRecord {
   Mass: string;
   Vendor: string;
   Producent: string;
+  BOM_Structure?: string;
   Projekt: number;
   [key: string]: any;
 }
@@ -34,6 +35,7 @@ export interface GristBOMStrukturaRecord {
   Mass: string;
   Vendor: string;
   Description: string;
+  BOM_Structure?: string;
   [key: string]: any;
 }
 
@@ -481,6 +483,7 @@ export async function syncToGrist(
       Mass: string;
       Vendor: string;
       Producent: string;
+      BOM_Structure: string;
     }
 
     const cadInserts: CadInsert[] = partsToCreateInCad.map(node => ({
@@ -493,6 +496,7 @@ export async function syncToGrist(
       Mass: node.rawData['Mass'] || '',
       Vendor: node.rawData['Vendor'] || '',
       Producent: node.rawData['Producent'] || node.rawData['Manufacturer'] || '',
+      BOM_Structure: node.bomStructure || node.rawData['BOM_Structure'] || node.rawData['BOM Structure'] || ''
     }));
 
     const cols = Object.keys(cadInserts[0]) as (keyof CadInsert)[];
@@ -567,7 +571,8 @@ export async function syncToGrist(
           Appearance: node.rawData['Appearance'] || '',
           Mass: node.rawData['Mass'] || '',
           Vendor: node.rawData['Vendor'] || '',
-          Description: node.description
+          Description: node.description,
+          BOM_Structure: node.bomStructure || node.rawData['BOM_Structure'] || node.rawData['BOM Structure'] || ''
         }
       ]);
     } else if (node.status !== 'Usunięty') {
@@ -585,7 +590,8 @@ export async function syncToGrist(
         Appearance: node.rawData['Appearance'] || '',
         Mass: node.rawData['Mass'] || '',
         Vendor: node.rawData['Vendor'] || '',
-        Description: node.description
+        Description: node.description,
+        BOM_Structure: node.bomStructure || node.rawData['BOM_Structure'] || node.rawData['BOM Structure'] || ''
       });
     }
   }
