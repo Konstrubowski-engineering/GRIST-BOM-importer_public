@@ -561,7 +561,7 @@ body, html {
 
 .content {
   flex: 1;
-  padding: 2rem;
+  padding: 1rem 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -601,6 +601,7 @@ body, html {
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
   background: var(--panel-bg);
   border-radius: 12px;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
@@ -662,6 +663,7 @@ body, html {
   top: 0;
   z-index: 10;
   width: 100%;
+  min-width: fit-content;
 }
 
 .tree-header > div {
@@ -679,13 +681,16 @@ body, html {
 
 .tree-body {
   width: 100%;
+  min-width: fit-content;
 }
 
 .tree-table-wrapper {
   flex: 1;
   display: block;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   border-radius: 0 0 12px 12px;
+  width: 100%;
 }
 
 /* Widths must match TreeNode.vue - dynamic widths */
