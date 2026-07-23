@@ -32,7 +32,8 @@
       <TreeNode 
         v-for="child in node.children" 
         :key="child.item + child.partNumber" 
-        :node="child" 
+        :node="child"
+        :columnWidths="columnWidths"
       />
     </div>
   </div>
@@ -43,7 +44,8 @@ import { computed } from 'vue';
 import type { BOMNode } from '../utils/bomParser';
 
 const props = defineProps<{
-  node: BOMNode
+  node: BOMNode;
+  columnWidths: Record<string, number>;
 }>();
 
 const toggleExpand = () => {
@@ -123,20 +125,20 @@ const actionClass = computed(() => {
   background-color: rgba(59, 130, 246, 0.1);
 }
 
-.col-expand { width: 40px; text-align: center; min-width: 40px; }
-.col-check { width: 40px; text-align: center; min-width: 40px; }
-.col-item { width: 120px; font-weight: 500; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 120px; }
-.col-part { width: 180px; font-family: monospace; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 180px; }
-.col-bom-struct { width: 130px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 130px; }
-.col-qty { width: 80px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; min-width: 80px; }
-.col-desc { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; min-width: 250px; }
-.col-stock { width: 150px; text-align: left; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 150px; }
-.col-rev { width: 80px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 80px; }
-.col-material { width: 150px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 150px; }
-.col-appearance { width: 150px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 150px; }
-.col-mass { width: 100px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 100px; }
-.col-vendor { width: 150px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 150px; }
-.col-action { width: 130px; text-align: left; white-space: nowrap; min-width: 130px; }
+.col-expand { width: v-bind("props.columnWidths['col-expand'] + 'px'"); text-align: center; min-width: v-bind("props.columnWidths['col-expand'] + 'px'"); }
+.col-check { width: v-bind("props.columnWidths['col-check'] + 'px'"); text-align: center; min-width: v-bind("props.columnWidths['col-check'] + 'px'"); }
+.col-item { width: v-bind("props.columnWidths['col-item'] + 'px'"); font-weight: 500; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("props.columnWidths['col-item'] + 'px'"); }
+.col-part { width: v-bind("props.columnWidths['col-part'] + 'px'"); font-family: monospace; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("props.columnWidths['col-part'] + 'px'"); }
+.col-bom-struct { width: v-bind("props.columnWidths['col-bom-struct'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("props.columnWidths['col-bom-struct'] + 'px'"); }
+.col-qty { width: v-bind("props.columnWidths['col-qty'] + 'px'"); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; min-width: v-bind("props.columnWidths['col-qty'] + 'px'"); }
+.col-desc { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; min-width: v-bind("props.columnWidths['col-desc'] + 'px'"); }
+.col-stock { width: v-bind("props.columnWidths['col-stock'] + 'px'"); text-align: left; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("props.columnWidths['col-stock'] + 'px'"); }
+.col-rev { width: v-bind("props.columnWidths['col-rev'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("props.columnWidths['col-rev'] + 'px'"); }
+.col-material { width: v-bind("props.columnWidths['col-material'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("props.columnWidths['col-material'] + 'px'"); }
+.col-appearance { width: v-bind("props.columnWidths['col-appearance'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("props.columnWidths['col-appearance'] + 'px'"); }
+.col-mass { width: v-bind("props.columnWidths['col-mass'] + 'px'"); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("props.columnWidths['col-mass'] + 'px'"); }
+.col-vendor { width: v-bind("props.columnWidths['col-vendor'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("props.columnWidths['col-vendor'] + 'px'"); }
+.col-action { width: v-bind("props.columnWidths['col-action'] + 'px'"); text-align: left; white-space: nowrap; min-width: v-bind("props.columnWidths['col-action'] + 'px'"); }
 
 /* Custom checkbox styling */
 .row-checkbox {

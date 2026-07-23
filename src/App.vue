@@ -66,24 +66,24 @@
         
         <div class="tree-table-wrapper">
           <div class="tree-header">
-            <div class="col-expand"></div>
-            <div class="col-check">✔</div>
-            <div class="col-item">Item</div>
-            <div class="col-part">Part Number</div>
-            <div class="col-bom-struct">BOM Structure</div>
-            <div class="col-qty">QTY</div>
-            <div class="col-desc">Description</div>
-            <div class="col-stock">Stock Number</div>
-            <div class="col-rev">REV</div>
-            <div class="col-material">Material</div>
-            <div class="col-appearance">Appearance</div>
-            <div class="col-mass">Mass</div>
-            <div class="col-vendor">Vendor</div>
-            <div class="col-action">Akcja</div>
+            <div class="col-expand"><div class="resize-handle" @mousedown="startResize('col-expand', $event)"></div></div>
+            <div class="col-check">✔<div class="resize-handle" @mousedown="startResize('col-check', $event)"></div></div>
+            <div class="col-item">Item<div class="resize-handle" @mousedown="startResize('col-item', $event)"></div></div>
+            <div class="col-part">Part Number<div class="resize-handle" @mousedown="startResize('col-part', $event)"></div></div>
+            <div class="col-bom-struct">BOM Structure<div class="resize-handle" @mousedown="startResize('col-bom-struct', $event)"></div></div>
+            <div class="col-qty">QTY<div class="resize-handle" @mousedown="startResize('col-qty', $event)"></div></div>
+            <div class="col-desc">Description<div class="resize-handle" @mousedown="startResize('col-desc', $event)"></div></div>
+            <div class="col-stock">Stock Number<div class="resize-handle" @mousedown="startResize('col-stock', $event)"></div></div>
+            <div class="col-rev">REV<div class="resize-handle" @mousedown="startResize('col-rev', $event)"></div></div>
+            <div class="col-material">Material<div class="resize-handle" @mousedown="startResize('col-material', $event)"></div></div>
+            <div class="col-appearance">Appearance<div class="resize-handle" @mousedown="startResize('col-appearance', $event)"></div></div>
+            <div class="col-mass">Mass<div class="resize-handle" @mousedown="startResize('col-mass', $event)"></div></div>
+            <div class="col-vendor">Vendor<div class="resize-handle" @mousedown="startResize('col-vendor', $event)"></div></div>
+            <div class="col-action">Akcja<div class="resize-handle" @mousedown="startResize('col-action', $event)"></div></div>
           </div>
 
           <div class="tree-body">
-            <TreeNode v-for="node in tree" :key="node.item + node.partNumber" :node="node" />
+            <TreeNode v-for="node in tree" :key="node.item + node.partNumber" :node="node" :columnWidths="columnWidths" />
           </div>
         </div>
       </div>
@@ -176,6 +176,24 @@ const fileData = ref<BOMNode[]>([]); // Store parsed file data for refresh
 const validationErrors = ref<string[]>([]);
 const validationWarnings = ref<string[]>([]);
 
+// Column widths state
+const columnWidths = ref<Record<string, number>>({
+  'col-expand': 40,
+  'col-check': 40,
+  'col-item': 120,
+  'col-part': 180,
+  'col-bom-struct': 130,
+  'col-qty': 80,
+  'col-desc': 250,
+  'col-stock': 150,
+  'col-rev': 80,
+  'col-material': 150,
+  'col-appearance': 150,
+  'col-mass': 100,
+  'col-vendor': 150,
+  'col-action': 130
+});
+
 // Modal state
 const showConfirmSync = ref(false);
 const showErrorModal = ref(false);
@@ -214,6 +232,39 @@ function flattenNodes(nodes: BOMNode[]): BOMNode[] {
   }
   return flat;
 }
+
+// Resize state
+const resizeData = ref<{
+  column: string;
+  startX: number;
+  startWidth: number;
+} | null>(null);
+
+// Column resize functions
+const startResize = (column: string, e: MouseEvent) => {
+  resizeData.value = {
+    column,
+    startX: e.clientX,
+    startWidth: columnWidths.value[column]
+  };
+  e.preventDefault();
+  document.addEventListener('mousemove', handleResize);
+  document.addEventListener('mouseup', stopResize);
+};
+
+const handleResize = (e: MouseEvent) => {
+  if (!resizeData.value) return;
+  const { column, startX, startWidth } = resizeData.value;
+  const delta = e.clientX - startX;
+  const newWidth = Math.max(30, startWidth + delta);
+  columnWidths.value[column] = newWidth;
+};
+
+const stopResize = () => {
+  resizeData.value = null;
+  document.removeEventListener('mousemove', handleResize);
+  document.removeEventListener('mouseup', stopResize);
+};
 
 // Show error in modal
 const showError = (message: string, details?: string) => {
@@ -610,7 +661,6 @@ body, html {
   position: sticky;
   top: 0;
   z-index: 10;
-  min-width: 1750px;
   width: 100%;
 }
 
@@ -628,7 +678,6 @@ body, html {
 }
 
 .tree-body {
-  min-width: 1750px;
   width: 100%;
 }
 
@@ -639,21 +688,42 @@ body, html {
   border-radius: 0 0 12px 12px;
 }
 
-/* Widths must match TreeNode.vue */
-.col-expand { width: 40px; text-align: center; min-width: 40px; }
-.col-check { width: 40px; text-align: center; min-width: 40px; }
-.col-item { width: 120px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 120px; }
-.col-part { width: 180px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 180px; }
-.col-bom-struct { width: 130px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 130px; }
-.col-qty { width: 80px; text-align: right; white-space: nowrap; min-width: 80px; }
-.col-desc { flex: 1; text-align: left; min-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.col-stock { width: 150px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 150px; }
-.col-rev { width: 80px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 80px; }
-.col-material { width: 150px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 150px; }
-.col-appearance { width: 150px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 150px; }
-.col-mass { width: 100px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 100px; }
-.col-vendor { width: 150px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 150px; }
-.col-action { width: 130px; text-align: left; white-space: nowrap; min-width: 130px; }
+/* Widths must match TreeNode.vue - dynamic widths */
+.col-expand { width: v-bind("columnWidths['col-expand'] + 'px'"); text-align: center; min-width: v-bind("columnWidths['col-expand'] + 'px'"); position: relative; }
+.col-check { width: v-bind("columnWidths['col-check'] + 'px'"); text-align: center; min-width: v-bind("columnWidths['col-check'] + 'px'"); position: relative; }
+.col-item { width: v-bind("columnWidths['col-item'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("columnWidths['col-item'] + 'px'"); position: relative; }
+.col-part { width: v-bind("columnWidths['col-part'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("columnWidths['col-part'] + 'px'"); position: relative; }
+.col-bom-struct { width: v-bind("columnWidths['col-bom-struct'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("columnWidths['col-bom-struct'] + 'px'"); position: relative; }
+.col-qty { width: v-bind("columnWidths['col-qty'] + 'px'"); text-align: right; white-space: nowrap; min-width: v-bind("columnWidths['col-qty'] + 'px'"); position: relative; }
+.col-desc { flex: 1; text-align: left; min-width: v-bind("columnWidths['col-desc'] + 'px'"); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; }
+.col-stock { width: v-bind("columnWidths['col-stock'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("columnWidths['col-stock'] + 'px'"); position: relative; }
+.col-rev { width: v-bind("columnWidths['col-rev'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("columnWidths['col-rev'] + 'px'"); position: relative; }
+.col-material { width: v-bind("columnWidths['col-material'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("columnWidths['col-material'] + 'px'"); position: relative; }
+.col-appearance { width: v-bind("columnWidths['col-appearance'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("columnWidths['col-appearance'] + 'px'"); position: relative; }
+.col-mass { width: v-bind("columnWidths['col-mass'] + 'px'"); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("columnWidths['col-mass'] + 'px'"); position: relative; }
+.col-vendor { width: v-bind("columnWidths['col-vendor'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("columnWidths['col-vendor'] + 'px'"); position: relative; }
+.col-action { width: v-bind("columnWidths['col-action'] + 'px'"); text-align: left; white-space: nowrap; min-width: v-bind("columnWidths['col-action'] + 'px'"); position: relative; }
+
+/* Resize handle styles */
+.tree-header > div > .resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 5px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.2s;
+  z-index: 20;
+}
+
+.tree-header > div > .resize-handle:hover {
+  background: rgba(59, 130, 246, 0.5);
+}
+
+.tree-header > div:last-child > .resize-handle {
+  display: none;
+}
 
 /* Validation Errors */
 .validation-errors {
