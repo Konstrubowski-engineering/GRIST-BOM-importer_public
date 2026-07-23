@@ -561,7 +561,7 @@ body, html {
 
 .content {
   flex: 1;
-  padding: 1rem 0;
+  padding: 0.5rem;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -606,6 +606,7 @@ body, html {
   border-radius: 12px;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
 }
 
 .toolbar {
@@ -662,8 +663,9 @@ body, html {
   position: sticky;
   top: 0;
   z-index: 10;
-  width: 100%;
-  min-width: fit-content;
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
 }
 
 .tree-header > div {
@@ -673,6 +675,8 @@ body, html {
   display: flex;
   align-items: center;
   box-sizing: border-box;
+  flex-shrink: 0;
+  flex-grow: 0;
 }
 
 .tree-header > div:last-child {
@@ -680,34 +684,35 @@ body, html {
 }
 
 .tree-body {
-  width: 100%;
-  min-width: fit-content;
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
 }
 
 .tree-table-wrapper {
   flex: 1;
-  display: block;
-  overflow-x: auto;
-  overflow-y: hidden;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
   border-radius: 0 0 12px 12px;
   width: 100%;
 }
 
 /* Widths must match TreeNode.vue - dynamic widths */
-.col-expand { width: v-bind("columnWidths['col-expand'] + 'px'"); text-align: center; min-width: v-bind("columnWidths['col-expand'] + 'px'"); position: relative; }
-.col-check { width: v-bind("columnWidths['col-check'] + 'px'"); text-align: center; min-width: v-bind("columnWidths['col-check'] + 'px'"); position: relative; }
-.col-item { width: v-bind("columnWidths['col-item'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("columnWidths['col-item'] + 'px'"); position: relative; }
-.col-part { width: v-bind("columnWidths['col-part'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("columnWidths['col-part'] + 'px'"); position: relative; }
-.col-bom-struct { width: v-bind("columnWidths['col-bom-struct'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("columnWidths['col-bom-struct'] + 'px'"); position: relative; }
-.col-qty { width: v-bind("columnWidths['col-qty'] + 'px'"); text-align: right; white-space: nowrap; min-width: v-bind("columnWidths['col-qty'] + 'px'"); position: relative; }
-.col-desc { flex: 1; text-align: left; min-width: v-bind("columnWidths['col-desc'] + 'px'"); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; }
-.col-stock { width: v-bind("columnWidths['col-stock'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("columnWidths['col-stock'] + 'px'"); position: relative; }
-.col-rev { width: v-bind("columnWidths['col-rev'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("columnWidths['col-rev'] + 'px'"); position: relative; }
-.col-material { width: v-bind("columnWidths['col-material'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("columnWidths['col-material'] + 'px'"); position: relative; }
-.col-appearance { width: v-bind("columnWidths['col-appearance'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("columnWidths['col-appearance'] + 'px'"); position: relative; }
-.col-mass { width: v-bind("columnWidths['col-mass'] + 'px'"); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("columnWidths['col-mass'] + 'px'"); position: relative; }
-.col-vendor { width: v-bind("columnWidths['col-vendor'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("columnWidths['col-vendor'] + 'px'"); position: relative; }
-.col-action { width: v-bind("columnWidths['col-action'] + 'px'"); text-align: left; white-space: nowrap; min-width: v-bind("columnWidths['col-action'] + 'px'"); position: relative; }
+.col-expand { width: v-bind("columnWidths['col-expand'] + 'px'"); min-width: v-bind("columnWidths['col-expand'] + 'px'"); max-width: v-bind("columnWidths['col-expand'] + 'px'"); text-align: center; justify-content: center; position: relative; flex: 0 0 auto; }
+.col-check { width: v-bind("columnWidths['col-check'] + 'px'"); min-width: v-bind("columnWidths['col-check'] + 'px'"); max-width: v-bind("columnWidths['col-check'] + 'px'"); text-align: center; justify-content: center; position: relative; flex: 0 0 auto; }
+.col-item { width: v-bind("columnWidths['col-item'] + 'px'"); min-width: v-bind("columnWidths['col-item'] + 'px'"); max-width: v-bind("columnWidths['col-item'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; flex: 0 0 auto; }
+.col-part { width: v-bind("columnWidths['col-part'] + 'px'"); min-width: v-bind("columnWidths['col-part'] + 'px'"); max-width: v-bind("columnWidths['col-part'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; flex: 0 0 auto; }
+.col-bom-struct { width: v-bind("columnWidths['col-bom-struct'] + 'px'"); min-width: v-bind("columnWidths['col-bom-struct'] + 'px'"); max-width: v-bind("columnWidths['col-bom-struct'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; flex: 0 0 auto; }
+.col-qty { width: v-bind("columnWidths['col-qty'] + 'px'"); min-width: v-bind("columnWidths['col-qty'] + 'px'"); max-width: v-bind("columnWidths['col-qty'] + 'px'"); text-align: right; justify-content: flex-end; white-space: nowrap; position: relative; flex: 0 0 auto; }
+.col-desc { width: v-bind("columnWidths['col-desc'] + 'px'"); min-width: v-bind("columnWidths['col-desc'] + 'px'"); max-width: v-bind("columnWidths['col-desc'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; flex: 0 0 auto; }
+.col-stock { width: v-bind("columnWidths['col-stock'] + 'px'"); min-width: v-bind("columnWidths['col-stock'] + 'px'"); max-width: v-bind("columnWidths['col-stock'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; flex: 0 0 auto; }
+.col-rev { width: v-bind("columnWidths['col-rev'] + 'px'"); min-width: v-bind("columnWidths['col-rev'] + 'px'"); max-width: v-bind("columnWidths['col-rev'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; flex: 0 0 auto; }
+.col-material { width: v-bind("columnWidths['col-material'] + 'px'"); min-width: v-bind("columnWidths['col-material'] + 'px'"); max-width: v-bind("columnWidths['col-material'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; flex: 0 0 auto; }
+.col-appearance { width: v-bind("columnWidths['col-appearance'] + 'px'"); min-width: v-bind("columnWidths['col-appearance'] + 'px'"); max-width: v-bind("columnWidths['col-appearance'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; flex: 0 0 auto; }
+.col-mass { width: v-bind("columnWidths['col-mass'] + 'px'"); min-width: v-bind("columnWidths['col-mass'] + 'px'"); max-width: v-bind("columnWidths['col-mass'] + 'px'"); text-align: right; justify-content: flex-end; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; flex: 0 0 auto; }
+.col-vendor { width: v-bind("columnWidths['col-vendor'] + 'px'"); min-width: v-bind("columnWidths['col-vendor'] + 'px'"); max-width: v-bind("columnWidths['col-vendor'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; flex: 0 0 auto; }
+.col-action { width: v-bind("columnWidths['col-action'] + 'px'"); min-width: v-bind("columnWidths['col-action'] + 'px'"); max-width: v-bind("columnWidths['col-action'] + 'px'"); text-align: left; white-space: nowrap; position: relative; flex: 0 0 auto; }
 
 /* Resize handle styles */
 .tree-header > div > .resize-handle {

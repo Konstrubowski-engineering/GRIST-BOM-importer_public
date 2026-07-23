@@ -92,12 +92,17 @@ const actionClass = computed(() => {
   transition: background-color 0.2s;
   font-size: 13px;
   overflow: visible;
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
 }
 
 .node-row > div {
   padding: 8px 12px;
   border-right: 1px solid rgba(255,255,255,0.05);
   box-sizing: border-box;
+  flex-shrink: 0;
+  flex-grow: 0;
 }
 .node-row:last-child > div:last-child {
   border-right: none;
@@ -107,7 +112,6 @@ const actionClass = computed(() => {
 }
 .node-children {
   margin-left: 0;
-  border-left: 2px solid rgba(59, 130, 246, 0.3);
 }
 
 .is-child .col-item {
@@ -126,20 +130,20 @@ const actionClass = computed(() => {
   background-color: rgba(59, 130, 246, 0.1);
 }
 
-.col-expand { width: v-bind("props.columnWidths['col-expand'] + 'px'"); text-align: center; min-width: v-bind("props.columnWidths['col-expand'] + 'px'"); }
-.col-check { width: v-bind("props.columnWidths['col-check'] + 'px'"); text-align: center; min-width: v-bind("props.columnWidths['col-check'] + 'px'"); }
-.col-item { width: v-bind("props.columnWidths['col-item'] + 'px'"); font-weight: 500; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("props.columnWidths['col-item'] + 'px'"); }
-.col-part { width: v-bind("props.columnWidths['col-part'] + 'px'"); font-family: monospace; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("props.columnWidths['col-part'] + 'px'"); }
-.col-bom-struct { width: v-bind("props.columnWidths['col-bom-struct'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("props.columnWidths['col-bom-struct'] + 'px'"); }
-.col-qty { width: v-bind("props.columnWidths['col-qty'] + 'px'"); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; min-width: v-bind("props.columnWidths['col-qty'] + 'px'"); }
-.col-desc { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; min-width: v-bind("props.columnWidths['col-desc'] + 'px'"); }
-.col-stock { width: v-bind("props.columnWidths['col-stock'] + 'px'"); text-align: left; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("props.columnWidths['col-stock'] + 'px'"); }
-.col-rev { width: v-bind("props.columnWidths['col-rev'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("props.columnWidths['col-rev'] + 'px'"); }
-.col-material { width: v-bind("props.columnWidths['col-material'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("props.columnWidths['col-material'] + 'px'"); }
-.col-appearance { width: v-bind("props.columnWidths['col-appearance'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("props.columnWidths['col-appearance'] + 'px'"); }
-.col-mass { width: v-bind("props.columnWidths['col-mass'] + 'px'"); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("props.columnWidths['col-mass'] + 'px'"); }
-.col-vendor { width: v-bind("props.columnWidths['col-vendor'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: v-bind("props.columnWidths['col-vendor'] + 'px'"); }
-.col-action { width: v-bind("props.columnWidths['col-action'] + 'px'"); text-align: left; white-space: nowrap; min-width: v-bind("props.columnWidths['col-action'] + 'px'"); }
+.col-expand { width: v-bind("props.columnWidths['col-expand'] + 'px'"); min-width: v-bind("props.columnWidths['col-expand'] + 'px'"); max-width: v-bind("props.columnWidths['col-expand'] + 'px'"); text-align: center; justify-content: center; flex: 0 0 auto; }
+.col-check { width: v-bind("props.columnWidths['col-check'] + 'px'"); min-width: v-bind("props.columnWidths['col-check'] + 'px'"); max-width: v-bind("props.columnWidths['col-check'] + 'px'"); text-align: center; justify-content: center; flex: 0 0 auto; }
+.col-item { width: v-bind("props.columnWidths['col-item'] + 'px'"); min-width: v-bind("props.columnWidths['col-item'] + 'px'"); max-width: v-bind("props.columnWidths['col-item'] + 'px'"); font-weight: 500; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 0 auto; }
+.col-part { width: v-bind("props.columnWidths['col-part'] + 'px'"); min-width: v-bind("props.columnWidths['col-part'] + 'px'"); max-width: v-bind("props.columnWidths['col-part'] + 'px'"); font-family: monospace; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 0 auto; }
+.col-bom-struct { width: v-bind("props.columnWidths['col-bom-struct'] + 'px'"); min-width: v-bind("props.columnWidths['col-bom-struct'] + 'px'"); max-width: v-bind("props.columnWidths['col-bom-struct'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 0 auto; }
+.col-qty { width: v-bind("props.columnWidths['col-qty'] + 'px'"); min-width: v-bind("props.columnWidths['col-qty'] + 'px'"); max-width: v-bind("props.columnWidths['col-qty'] + 'px'"); text-align: right; justify-content: flex-end; white-space: nowrap; font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+.col-desc { width: v-bind("props.columnWidths['col-desc'] + 'px'"); min-width: v-bind("props.columnWidths['col-desc'] + 'px'"); max-width: v-bind("props.columnWidths['col-desc'] + 'px'"); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; flex: 0 0 auto; }
+.col-stock { width: v-bind("props.columnWidths['col-stock'] + 'px'"); min-width: v-bind("props.columnWidths['col-stock'] + 'px'"); max-width: v-bind("props.columnWidths['col-stock'] + 'px'"); text-align: left; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 0 auto; }
+.col-rev { width: v-bind("props.columnWidths['col-rev'] + 'px'"); min-width: v-bind("props.columnWidths['col-rev'] + 'px'"); max-width: v-bind("props.columnWidths['col-rev'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 0 auto; }
+.col-material { width: v-bind("props.columnWidths['col-material'] + 'px'"); min-width: v-bind("props.columnWidths['col-material'] + 'px'"); max-width: v-bind("props.columnWidths['col-material'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 0 auto; }
+.col-appearance { width: v-bind("props.columnWidths['col-appearance'] + 'px'"); min-width: v-bind("props.columnWidths['col-appearance'] + 'px'"); max-width: v-bind("props.columnWidths['col-appearance'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 0 auto; }
+.col-mass { width: v-bind("props.columnWidths['col-mass'] + 'px'"); min-width: v-bind("props.columnWidths['col-mass'] + 'px'"); max-width: v-bind("props.columnWidths['col-mass'] + 'px'"); text-align: right; justify-content: flex-end; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 0 auto; }
+.col-vendor { width: v-bind("props.columnWidths['col-vendor'] + 'px'"); min-width: v-bind("props.columnWidths['col-vendor'] + 'px'"); max-width: v-bind("props.columnWidths['col-vendor'] + 'px'"); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 0 auto; }
+.col-action { width: v-bind("props.columnWidths['col-action'] + 'px'"); min-width: v-bind("props.columnWidths['col-action'] + 'px'"); max-width: v-bind("props.columnWidths['col-action'] + 'px'"); text-align: left; white-space: nowrap; flex: 0 0 auto; }
 
 /* Custom checkbox styling */
 .row-checkbox {
