@@ -1,18 +1,26 @@
 <template>
-  <div class="tree-node">
+  <div class="tree-node" v-if="isVisible">
     <div 
       class="node-row" 
-      :class="{ 'is-deleted': node.status === 'Usunięty', 'is-new': node.action === 'create', 'is-child': node.parentItem !== null }"
+      :class="{ 
+        'is-deleted': node.status === 'Usunięty', 
+        'is-new': node.action === 'create', 
+        'is-child': (depth || 0) > 0,
+        'is-match': isDirectMatch
+      }"
     >
       <div class="col-expand">
-        <button v-if="node.children.length" @click="toggleExpand" class="expand-btn">
+        <button v-if="visibleChildren.length" @click="toggleExpand" class="expand-btn">
           {{ node.expanded ? '▼' : '▶' }}
         </button>
       </div>
       <div class="col-check">
         <input type="checkbox" v-model="node.selected" @change="onCheckChange" class="row-checkbox" />
       </div>
-      <div class="col-item">{{ node.item }}</div>
+      <div class="col-item" :style="{ paddingLeft: `${12 + (depth || 0) * 16}px` }">
+        <span v-if="(depth || 0) > 0" class="tree-indent-indicator">↳ </span>
+        <span class="item-text">{{ node.item }}</span>
+      </div>
       <div class="col-part">{{ node.partNumber }}</div>
       <div class="col-bom-struct">{{ node.bomStructure }}</div>
       <div class="col-qty">{{ node.qty }}</div>
@@ -28,12 +36,14 @@
       </div>
     </div>
     
-    <div v-if="node.expanded && node.children.length" class="node-children">
+    <div v-if="node.expanded && visibleChildren.length" class="node-children">
       <TreeNode 
-        v-for="child in node.children" 
+        v-for="child in visibleChildren" 
         :key="child.item + child.partNumber" 
         :node="child"
         :columnWidths="columnWidths"
+        :depth="(depth || 0) + 1"
+        :searchQuery="searchQuery"
       />
     </div>
   </div>
@@ -42,11 +52,30 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { BOMNode } from '../utils/bomParser';
+import { nodeMatchesQuery, isNodeVisible } from '../utils/filterUtils';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   node: BOMNode;
   columnWidths: Record<string, number>;
-}>();
+  depth?: number;
+  searchQuery?: string;
+}>(), {
+  depth: 0,
+  searchQuery: ''
+});
+
+const isVisible = computed(() => {
+  return isNodeVisible(props.node, props.searchQuery);
+});
+
+const isDirectMatch = computed(() => {
+  return Boolean(props.searchQuery && props.searchQuery.trim() && nodeMatchesQuery(props.node, props.searchQuery));
+});
+
+const visibleChildren = computed(() => {
+  if (!props.searchQuery || !props.searchQuery.trim()) return props.node.children;
+  return props.node.children.filter(child => isNodeVisible(child, props.searchQuery));
+});
 
 const toggleExpand = () => {
   props.node.expanded = !props.node.expanded;
@@ -54,14 +83,16 @@ const toggleExpand = () => {
 
 const onCheckChange = (e: Event) => {
   const isChecked = (e.target as HTMLInputElement).checked;
-  // Cascade to children
+  // Cascade to visible children
   cascadeCheck(props.node, isChecked);
 };
 
 const cascadeCheck = (n: BOMNode, checked: boolean) => {
   n.selected = checked;
   for (const child of n.children) {
-    cascadeCheck(child, checked);
+    if (!props.searchQuery || isNodeVisible(child, props.searchQuery)) {
+      cascadeCheck(child, checked);
+    }
   }
 };
 
@@ -114,16 +145,31 @@ const actionClass = computed(() => {
   margin-left: 0;
 }
 
-.is-child .col-item {
-  padding-left: 32px;
+.tree-indent-indicator {
+  color: var(--text-muted);
+  opacity: 0.7;
+  font-size: 11px;
+  margin-right: 4px;
+  user-select: none;
+  font-family: monospace;
 }
+
+.is-match {
+  background-color: rgba(59, 130, 246, 0.12);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.is-match:hover {
+  background-color: rgba(59, 130, 246, 0.22);
+}
+
 .is-deleted {
   opacity: 0.6;
   text-decoration: line-through;
 }
 
-/* Zebra striping for better readability */
-.tree-node:nth-child(even) > .node-row {
+/* Zebra striping for better readability (when not matched) */
+.tree-node:nth-child(even) > .node-row:not(.is-match) {
   background-color: rgba(255, 255, 255, 0.02);
 }
 .tree-node:nth-child(even):hover > .node-row {

@@ -277,10 +277,17 @@ function formatGristTable<T>(gristTableData: any): T[] {
  */
 function filterActiveProjects(projects: any[]): any[] {
   if (!Array.isArray(projects)) return [];
-  return projects.filter(p => 
-    p && typeof p === 'object' && 
-    (p.Status === "W trakcie" || p.status === "W trakcie")
-  );
+  return projects
+    .filter(p => {
+      if (!p || typeof p !== 'object') return false;
+      const status = String(p.Status || p.status || '').trim().toLowerCase();
+      return status === 'w trakcie';
+    })
+    .sort((a, b) => {
+      const projA = String(a.Projekt || a.id || '');
+      const projB = String(b.Projekt || b.id || '');
+      return projA.localeCompare(projB, undefined, { numeric: true, sensitivity: 'base' });
+    });
 }
 
 export async function fetchProjects() {

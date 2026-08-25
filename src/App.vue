@@ -55,19 +55,59 @@
       <!-- Tree View -->
       <div v-else-if="tree.length" class="tree-container">
         <div class="toolbar">
-          <button @click="reset" class="btn btn-secondary" :disabled="isSyncing">Anuluj</button>
-          <button @click="refreshActions" class="btn btn-secondary" :disabled="!fileData.length || isSyncing">
-            Odśwież akcje
-          </button>
-          <button @click="showConfirmSync = true" class="btn btn-primary" :disabled="isSyncing || !projektId">
-            {{ isSyncing ? 'Synchronizowanie...' : 'Synchronizuj zaznaczone z Grist' }}
-          </button>
+          <div class="toolbar-left">
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input 
+                v-model="searchQuery" 
+                type="text" 
+                class="search-input" 
+                placeholder="Filtruj (dowolna kolumna, np. plate, stal, 1.2)..." 
+                :disabled="isSyncing"
+              />
+              <button 
+                v-if="searchQuery" 
+                @click="searchQuery = ''" 
+                class="search-clear-btn" 
+                title="Wyczyść filtr"
+              >
+                ✕
+              </button>
+            </div>
+            <div v-if="searchQuery" class="filter-count-badge">
+              Znaleziono: <strong>{{ matchingCount }}</strong> / {{ totalCount }}
+            </div>
+            <div class="toolbar-tree-actions">
+              <button @click="expandAll" class="btn btn-sm btn-outline" title="Rozwiń wszystkie gałęzie">Rozwiń</button>
+              <button @click="collapseAll" class="btn btn-sm btn-outline" title="Zwiń wszystkie gałęzie">Zwiń</button>
+            </div>
+          </div>
+
+          <div class="toolbar-right">
+            <button @click="reset" class="btn btn-secondary" :disabled="isSyncing">Anuluj</button>
+            <button @click="refreshActions" class="btn btn-secondary" :disabled="!fileData.length || isSyncing">
+              Odśwież akcje
+            </button>
+            <button @click="showConfirmSync = true" class="btn btn-primary" :disabled="isSyncing || !projektId || selectedCount === 0">
+              {{ isSyncing ? 'Synchronizowanie...' : `Synchronizuj (${selectedCount}) z Grist` }}
+            </button>
+          </div>
         </div>
         
         <div class="tree-table-wrapper">
           <div class="tree-header">
             <div class="col-expand"><div class="resize-handle" @mousedown="startResize('col-expand', $event)"></div></div>
-            <div class="col-check">✔<div class="resize-handle" @mousedown="startResize('col-check', $event)"></div></div>
+            <div class="col-check">
+              <input 
+                type="checkbox" 
+                class="row-checkbox header-checkbox" 
+                :checked="isAllVisibleSelected"
+                :indeterminate.prop="isSomeVisibleSelected"
+                @change="toggleSelectAllVisible"
+                :title="searchQuery ? 'Zaznacz/odznacz wszystkie przefiltrowane pozycje' : 'Zaznacz/odznacz wszystkie pozycje'"
+              />
+              <div class="resize-handle" @mousedown="startResize('col-check', $event)"></div>
+            </div>
             <div class="col-item">Item<div class="resize-handle" @mousedown="startResize('col-item', $event)"></div></div>
             <div class="col-part">Part Number<div class="resize-handle" @mousedown="startResize('col-part', $event)"></div></div>
             <div class="col-bom-struct">BOM Structure<div class="resize-handle" @mousedown="startResize('col-bom-struct', $event)"></div></div>
@@ -83,7 +123,17 @@
           </div>
 
           <div class="tree-body">
-            <TreeNode v-for="node in tree" :key="node.item + node.partNumber" :node="node" :columnWidths="columnWidths" />
+            <TreeNode 
+              v-for="node in tree" 
+              :key="node.item + node.partNumber" 
+              :node="node" 
+              :columnWidths="columnWidths"
+              :depth="0"
+              :searchQuery="searchQuery"
+            />
+            <div v-if="searchQuery && matchingCount === 0" class="no-results-message">
+              Brak pozycji pasujących do frazy: <strong>"{{ searchQuery }}"</strong>
+            </div>
           </div>
         </div>
       </div>
@@ -163,6 +213,7 @@ import {
   GristTimeoutError
 } from './utils/gristApi';
 import { calculateDiff } from './utils/diffLogic';
+import { nodeMatchesQuery, hasMatchingDescendant } from './utils/filterUtils';
 
 // State
 const tree = ref<BOMNode[]>([]);
@@ -175,6 +226,7 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const fileData = ref<BOMNode[]>([]); // Store parsed file data for refresh
 const validationErrors = ref<string[]>([]);
 const validationWarnings = ref<string[]>([]);
+const searchQuery = ref('');
 
 // Column widths state
 const columnWidths = ref<Record<string, number>>({
@@ -201,24 +253,97 @@ const errorMessage = ref('');
 const errorDetails = ref('');
 
 // Sync summary computed properties
+const allFlatNodes = computed(() => {
+  return flattenNodes(tree.value);
+});
+
+const totalCount = computed(() => {
+  return allFlatNodes.value.length;
+});
+
 const selectedCount = computed(() => {
-  const flatNodes = flattenNodes(tree.value);
-  return flatNodes.filter(n => n.selected).length;
+  return allFlatNodes.value.filter(n => n.selected).length;
 });
 
 const createCount = computed(() => {
-  const flatNodes = flattenNodes(tree.value);
-  return flatNodes.filter(n => n.selected && n.action === 'create').length;
+  return allFlatNodes.value.filter(n => n.selected && n.action === 'create').length;
 });
 
 const updateCount = computed(() => {
-  const flatNodes = flattenNodes(tree.value);
-  return flatNodes.filter(n => n.selected && n.action === 'update').length;
+  return allFlatNodes.value.filter(n => n.selected && n.action === 'update').length;
 });
 
 const deleteCount = computed(() => {
-  const flatNodes = flattenNodes(tree.value);
-  return flatNodes.filter(n => n.selected && n.action === 'delete').length;
+  return allFlatNodes.value.filter(n => n.selected && n.action === 'delete').length;
+});
+
+// Filtering & Matching computed properties
+const matchingNodes = computed(() => {
+  if (!searchQuery.value.trim()) return allFlatNodes.value;
+  return allFlatNodes.value.filter(n => nodeMatchesQuery(n, searchQuery.value));
+});
+
+const matchingCount = computed(() => {
+  return matchingNodes.value.length;
+});
+
+// Global checkbox computed properties & actions
+const isAllVisibleSelected = computed(() => {
+  if (matchingNodes.value.length === 0) return false;
+  return matchingNodes.value.every(n => n.selected);
+});
+
+const isSomeVisibleSelected = computed(() => {
+  if (matchingNodes.value.length === 0) return false;
+  const count = matchingNodes.value.filter(n => n.selected).length;
+  return count > 0 && count < matchingNodes.value.length;
+});
+
+const toggleSelectAllVisible = (e: Event) => {
+  const target = e.target as HTMLInputElement;
+  const shouldSelect = target.checked;
+  for (const node of matchingNodes.value) {
+    node.selected = shouldSelect;
+  }
+};
+
+// Tree expand / collapse actions
+const expandAll = () => {
+  const setExpanded = (nodes: BOMNode[], exp: boolean) => {
+    for (const node of nodes) {
+      node.expanded = exp;
+      if (node.children && node.children.length > 0) setExpanded(node.children, exp);
+    }
+  };
+  setExpanded(tree.value, true);
+};
+
+const collapseAll = () => {
+  const setExpanded = (nodes: BOMNode[], exp: boolean) => {
+    for (const node of nodes) {
+      node.expanded = exp;
+      if (node.children && node.children.length > 0) setExpanded(node.children, exp);
+    }
+  };
+  setExpanded(tree.value, false);
+};
+
+// Auto-expand matching branches when user types a search query
+watch(searchQuery, (newQuery) => {
+  const q = newQuery.trim().toLowerCase();
+  if (q) {
+    const expandMatchingParents = (nodes: BOMNode[]) => {
+      for (const node of nodes) {
+        if (hasMatchingDescendant(node, q)) {
+          node.expanded = true;
+        }
+        if (node.children && node.children.length > 0) {
+          expandMatchingParents(node.children);
+        }
+      }
+    };
+    expandMatchingParents(tree.value);
+  }
 });
 
 // Helper function to flatten nodes (moved from gristApi.ts for reuse)
@@ -425,6 +550,7 @@ const reset = () => {
   fileData.value = [];
   validationErrors.value = [];
   validationWarnings.value = [];
+  searchQuery.value = '';
 };
 
 const confirmSync = async () => {
@@ -610,12 +736,131 @@ body, html {
 }
 
 .toolbar {
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1.25rem;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   gap: 1rem;
+  flex-wrap: wrap;
   border-bottom: 1px solid rgba(255,255,255,0.1);
   background: linear-gradient(180deg, var(--panel-bg) 0%, rgba(30, 41, 59, 0.8) 100%);
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 280px;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 380px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  font-size: 0.85rem;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.search-input {
+  width: 100%;
+  padding: 6px 30px 6px 32px;
+  background-color: #0f172a;
+  color: var(--text-main);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.search-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 0.8rem;
+  line-height: 1;
+  border-radius: 4px;
+}
+
+.search-clear-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.filter-count-badge {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 6px;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.filter-count-badge strong {
+  color: #60a5fa;
+}
+
+.toolbar-tree-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.btn-sm {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.btn-outline:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.no-results-message {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.no-results-message strong {
+  color: var(--text-main);
 }
 
 .btn {
