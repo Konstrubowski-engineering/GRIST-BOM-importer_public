@@ -272,6 +272,17 @@ function formatGristTable<T>(gristTableData: any): T[] {
   return records;
 }
 
+/**
+ * Filter projects to only return active ones (Status === "W trakcie")
+ */
+function filterActiveProjects(projects: any[]): any[] {
+  if (!Array.isArray(projects)) return [];
+  return projects.filter(p => 
+    p && typeof p === 'object' && 
+    (p.Status === "W trakcie" || p.status === "W trakcie")
+  );
+}
+
 export async function fetchProjects() {
   if (!hasGrist()) {
     console.warn('[GRIST-BOM] grist is undefined - widget not in Grist environment');
@@ -303,7 +314,8 @@ export async function fetchProjects() {
           tableData = await grist.docApi.fetchTable(tableName);
           if (tableData && tableData.id && tableData.id.length > 0) {
             console.warn('[GRIST-BOM] Successfully fetched Projekty table');
-            return formatGristTable<any>(tableData);
+            const projects = formatGristTable<any>(tableData);
+            return filterActiveProjects(projects);
           }
         }
       }
@@ -339,7 +351,8 @@ export async function fetchProjects() {
       console.warn('[GRIST-BOM] fetchTable("Projekty") returned:', tableData ? 'data' : 'empty');
       if (tableData && tableData.id && tableData.id.length > 0) {
         console.warn('[GRIST-BOM] Found Projekty table with standard name');
-        return formatGristTable<any>(tableData);
+        const projects = formatGristTable<any>(tableData);
+        return filterActiveProjects(projects);
       }
     } catch (e) {
       console.warn('[GRIST-BOM] fetchTable("Projekty") failed:', e);
@@ -351,7 +364,8 @@ export async function fetchProjects() {
       tableData = await grist.docApi.fetchTable('24');
       if (tableData && tableData.id && tableData.id.length > 0) {
         console.warn('[GRIST-BOM] Found Projekty table with numeric ID 24 (as string)');
-        return formatGristTable<any>(tableData);
+        const projects = formatGristTable<any>(tableData);
+        return filterActiveProjects(projects);
       }
     } catch (e) {
       console.warn('[GRIST-BOM] fetchTable("24") failed:', e);
@@ -363,7 +377,8 @@ export async function fetchProjects() {
       tableData = await grist.docApi.fetchTable('Table24');
       if (tableData && tableData.id && tableData.id.length > 0) {
         console.warn('[GRIST-BOM] Found Projekty table as Table24');
-        return formatGristTable<any>(tableData);
+        const projects = formatGristTable<any>(tableData);
+        return filterActiveProjects(projects);
       }
     } catch (e) {
       console.warn('[GRIST-BOM] fetchTable("Table24") failed:', e);
@@ -375,7 +390,8 @@ export async function fetchProjects() {
       tableData = await grist.docApi.fetchSelectedTable();
       if (tableData && tableData.id && tableData.id.length > 0) {
         console.warn('[GRIST-BOM] Using fetchSelectedTable()');
-        return formatGristTable<any>(tableData);
+        const projects = formatGristTable<any>(tableData);
+        return filterActiveProjects(projects);
       }
     } catch (e) {
       console.warn('[GRIST-BOM] fetchSelectedTable() failed:', e);
@@ -395,11 +411,13 @@ export async function fetchProjects() {
           // Check if this table has a 'Projekt' or 'Projekty' column
           if (tableData && tableData.Projekt && Array.isArray(tableData.Projekt) && tableData.Projekt.length > 0) {
             console.warn(`[GRIST-BOM] Found table with Projekt column: ${tableName}`);
-            return formatGristTable<any>(tableData);
+            const projects = formatGristTable<any>(tableData);
+            return filterActiveProjects(projects);
           }
           if (tableData && tableData.Projekty && Array.isArray(tableData.Projekty) && tableData.Projekty.length > 0) {
             console.warn(`[GRIST-BOM] Found table with Projekty column: ${tableName}`);
-            return formatGristTable<any>(tableData);
+            const projects = formatGristTable<any>(tableData);
+            return filterActiveProjects(projects);
           }
         } catch (e) {
           // Skip errors for individual tables
@@ -558,21 +576,22 @@ export async function syncToGrist(
     }
 
     if (node.gristStructureId) {
-      // Update existing structure: QTY, Parent, Status_czesci + new columns
+      // Update existing structure: Item, QTY, Parent, Status_czesci + new columns
       structUpdates.push([
         node.gristStructureId,
         {
+          Item: node.item,
           QTY: node.qty,
           Parent: parentId,
           Status_czesci: node.status,
-          Stock_Number: node.rawData['Stock_Number'] || node.rawData['Stock Number'] || '',
-          REV: node.rawData['REV'] || node.rawData['Revision'] || '',
-          Material: node.rawData['Material'] || '',
-          Appearance: node.rawData['Appearance'] || '',
-          Mass: node.rawData['Mass'] || '',
-          Vendor: node.rawData['Vendor'] || '',
+          Stock_Number: node.rawData?.['Stock_Number'] || node.rawData?.['Stock Number'] || '',
+          REV: node.rawData?.['REV'] || node.rawData?.['Revision'] || '',
+          Material: node.rawData?.['Material'] || '',
+          Appearance: node.rawData?.['Appearance'] || '',
+          Mass: node.rawData?.['Mass'] || '',
+          Vendor: node.rawData?.['Vendor'] || '',
           Description: node.description,
-          BOM_Structure: node.bomStructure || node.rawData['BOM_Structure'] || node.rawData['BOM Structure'] || ''
+          BOM_Structure: node.bomStructure || node.rawData?.['BOM_Structure'] || node.rawData?.['BOM Structure'] || ''
         }
       ]);
     } else if (node.status !== 'Usunięty') {

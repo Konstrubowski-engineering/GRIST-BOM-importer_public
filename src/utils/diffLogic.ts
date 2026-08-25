@@ -49,132 +49,173 @@ export function calculateDiff(
   console.warn('[GRIST-BOM] calculateDiff: All CAD records:', cadRecords.length);
   console.warn('[GRIST-BOM] calculateDiff: Struct records for this project:', projectStructRecords.length);
   
-  // Build structure map: parentPartNumber -> Map<childPartNumber, structRecord>
-  // This represents the CURRENT structure in Grist for this project
-  const structMap = new Map<string, Map<string, GristBOMStrukturaRecord>>();
+  // ========================================================================
+  // Build structure lookup maps for this project
+  // 1. exactStructMap: key "${parentPartNumber}:::${childPartNumber}" -> GristBOMStrukturaRecord[]
+  // 2. partStructMap:  key "${childPartNumber}" -> GristBOMStrukturaRecord[]
+  // ========================================================================
+  const exactStructMap = new Map<string, GristBOMStrukturaRecord[]>();
+  const partStructMap = new Map<string, GristBOMStrukturaRecord[]>();
   
   for (const s of projectStructRecords) {
-    const parentId = s.Parent;
-    const childId = s.Part_Number;
+    const childPN = cadIdToPartNumber.get(s.Part_Number);
+    if (!childPN) continue;
     
-    const parentPartNumber = parentId ? cadIdToPartNumber.get(parentId) || 'root' : 'root';
-    const childPartNumber = cadIdToPartNumber.get(childId);
+    const parentPN = s.Parent ? (cadIdToPartNumber.get(s.Parent) || 'root') : 'root';
+    const exactKey = `${parentPN}:::${childPN}`;
     
-    if (childPartNumber) {
-      if (!structMap.has(parentPartNumber)) {
-        structMap.set(parentPartNumber, new Map());
-      }
-      structMap.get(parentPartNumber)!.set(childPartNumber, s);
+    if (!exactStructMap.has(exactKey)) {
+      exactStructMap.set(exactKey, []);
     }
+    exactStructMap.get(exactKey)!.push(s);
+    
+    if (!partStructMap.has(childPN)) {
+      partStructMap.set(childPN, []);
+    }
+    partStructMap.get(childPN)!.push(s);
   }
   
+  // Track matched Grist structure IDs to prevent claiming the same Grist record multiple times
+  const matchedStructIds = new Set<number>();
+  
   // ========================================================================
-  // Calculate actions for each node
+  // Clear any phantom 'delete' nodes from previous diff runs
   // ========================================================================
   const flatNodes = flattenNodes(nodes);
-  
   for (const node of flatNodes) {
-    // Normalize part number for lookup
+    node.children = node.children.filter(c => c.action !== 'delete');
+    node.gristId = undefined;
+    node.gristStructureId = undefined;
+  }
+  
+  // Phase 1: Exact matches (Parent Part Number + Child Part Number)
+  for (const node of flatNodes) {
     const normalizedPartNumber = node.partNumber.toString().trim().toUpperCase();
     const cadRecord = cadMap.get(normalizedPartNumber);
+    if (cadRecord) {
+      node.gristId = cadRecord.id;
+    }
     
-    // Determine parent part number for structure lookup
     const parentNode = node.parentItem ? flatNodes.find(n => n.item === node.parentItem) : null;
     const parentPartNumber = parentNode ? parentNode.partNumber.toString().trim().toUpperCase() : 'root';
     
-    // Check if this node exists in BOM_CAD (global library)
-    const partExistsInCad = cadRecord !== undefined;
+    const exactKey = `${parentPartNumber}:::${normalizedPartNumber}`;
+    const candidates = exactStructMap.get(exactKey) || [];
     
-    // Check if the STRUCTURE relationship (parent -> child) exists in BOM_struktura for this project
-    const childrenMap = structMap.get(parentPartNumber);
-    const structRecord = childrenMap?.get(normalizedPartNumber);
-    const structureExists = structRecord !== undefined;
-    
-    if (!partExistsInCad) {
-      // PartNumber doesn't exist in BOM_CAD at all
-      node.action = 'create';
-      node.status = 'Aktywny';
-      console.warn('[GRIST-BOM] Node NOT in BOM_CAD:', node.partNumber, '→ action: create');
-    } else {
-      node.gristId = cadRecord.id;
-      
-      if (!structureExists) {
-        // Part exists in BOM_CAD but the structure relationship doesn't exist for this project
-        node.action = 'create';
-        node.status = 'Aktywny';
-        console.warn('[GRIST-BOM] Node in BOM_CAD but NOT in struktura for this project:', node.partNumber, 'parent:', parentPartNumber, '→ action: create');
-      } else {
-        // Both part and structure exist
-        node.gristId = cadRecord.id;
-        node.gristStructureId = structRecord.id;
-        
-        // Check if QTY, Status, or BOM_Structure changed
-        const existingBomStruct = structRecord.BOM_Structure || cadRecord.BOM_Structure || '';
-        const bomStructChanged = existingBomStruct !== node.bomStructure;
-        
-        if (structRecord.QTY != node.qty || structRecord.Status_czesci === 'Usunięty' || bomStructChanged) {
-          node.action = 'update';
-          node.status = 'Aktywny';
-          console.warn('[GRIST-BOM] Node structure exists but QTY/Status/BOM_Structure changed:', node.partNumber, 'QTY:', structRecord.QTY, 'vs', node.qty, 'BOM_Struct:', existingBomStruct, 'vs', node.bomStructure, '→ action: update');
-        } else {
-          node.action = 'none';
-          node.status = 'Aktywny';
-          console.warn('[GRIST-BOM] Node structure exists with same QTY/BOM_Structure:', node.partNumber, '→ action: none');
+    // Find first unmatched candidate (preferring exact Item string if multiple)
+    let match: GristBOMStrukturaRecord | undefined;
+    for (const cand of candidates) {
+      if (!matchedStructIds.has(cand.id)) {
+        if (cand.Item === node.item) {
+          match = cand;
+          break;
+        } else if (!match) {
+          match = cand;
         }
+      }
+    }
+    
+    if (match) {
+      matchedStructIds.add(match.id);
+      node.gristStructureId = match.id;
+      
+      const existingBomStruct = match.BOM_Structure || (cadRecord ? cadRecord.BOM_Structure : '') || '';
+      const bomStructChanged = existingBomStruct !== node.bomStructure;
+      const qtyChanged = Number(match.QTY) !== Number(node.qty);
+      const statusChanged = match.Status_czesci === 'Usunięty';
+      const itemChanged = match.Item !== node.item;
+      
+      if (qtyChanged || statusChanged || bomStructChanged || itemChanged) {
+        node.action = 'update';
+        node.status = 'Aktywny';
+        console.warn('[GRIST-BOM] Exact match with changes:', node.partNumber, '→ action: update');
+      } else {
+        node.action = 'none';
+        node.status = 'Aktywny';
+        console.warn('[GRIST-BOM] Exact match unchanged:', node.partNumber, '→ action: none');
       }
     }
   }
   
-  // ========================================================================
-  // Handle Soft Deletions: Items in Grist but NOT in XLSX
-  // ========================================================================
-  // Clear any phantom 'delete' nodes from previous diff runs to prevent
-  // them from accumulating on repeated refreshActions() calls (since
-  // fileData and tree share the same object references).
+  // Phase 2: Moved / Re-parented matches (Part Number exists in this project's structure under a different parent/item)
   for (const node of flatNodes) {
-    node.children = node.children.filter(c => c.action !== 'delete');
-  }
-
-  const allExcelParts = new Set(flatNodes.map(n => n.partNumber.toString().trim().toUpperCase()));
-  
-  for (const [parentPN, childrenMap] of structMap.entries()) {
-    // Only handle soft deletions for parents that are in the Excel file
-    if (parentPN !== 'root' && !allExcelParts.has(parentPN)) {
-      continue;
+    if (node.gristStructureId !== undefined) continue;
+    
+    const normalizedPartNumber = node.partNumber.toString().trim().toUpperCase();
+    const cadRecord = cadMap.get(normalizedPartNumber);
+    if (cadRecord) {
+      node.gristId = cadRecord.id;
     }
     
-    for (const [childPN, structRecord] of childrenMap.entries()) {
-      if (!allExcelParts.has(childPN) && structRecord.Status_czesci !== 'Usunięty') {
-        // This item is in Grist structure but missing from Excel
-        const cadRecord = cadRecords.find(c => c.id === structRecord.Part_Number);
-        
-        const phantomNode: BOMNode = {
-          item: structRecord.Item || '?',
-          partNumber: childPN,
-          qty: structRecord.QTY,
-          description: cadRecord ? cadRecord.Description : 'Usunięty (nie w XLSX)',
-          bomStructure: structRecord.BOM_Structure || (cadRecord ? cadRecord.BOM_Structure : '') || '',
-          rawData: {} as any,
-          children: [],
-          parentItem: null,
-          selected: false,
-          expanded: true,
-          action: 'delete',
-          status: 'Usunięty',
-          gristId: structRecord.Part_Number,
-          gristStructureId: structRecord.id
-        };
-        
-        if (parentPN !== 'root') {
+    const candidates = partStructMap.get(normalizedPartNumber) || [];
+    const match = candidates.find(cand => !matchedStructIds.has(cand.id));
+    
+    if (match) {
+      matchedStructIds.add(match.id);
+      node.gristStructureId = match.id;
+      node.action = 'update'; // Hierarchy or position changed
+      node.status = 'Aktywny';
+      console.warn('[GRIST-BOM] Re-parented match for:', node.partNumber, 'old struct id:', match.id, '→ action: update');
+    }
+  }
+  
+  // Phase 3: Brand new items (not in Grist structure for this project)
+  for (const node of flatNodes) {
+    if (node.gristStructureId === undefined) {
+      const normalizedPartNumber = node.partNumber.toString().trim().toUpperCase();
+      const cadRecord = cadMap.get(normalizedPartNumber);
+      if (cadRecord) {
+        node.gristId = cadRecord.id;
+      }
+      node.action = 'create';
+      node.status = 'Aktywny';
+      console.warn('[GRIST-BOM] New node in structure:', node.partNumber, '→ action: create');
+    }
+  }
+  
+  // ========================================================================
+  // Phase 4: Soft Deletions (Items in Grist structure that are missing from XLSX)
+  // ========================================================================
+  for (const s of projectStructRecords) {
+    if (!matchedStructIds.has(s.id) && s.Status_czesci !== 'Usunięty') {
+      const childPN = cadIdToPartNumber.get(s.Part_Number) || 'Nieznana część';
+      const cadRecord = cadRecords.find(c => c.id === s.Part_Number);
+      
+      const phantomNode: BOMNode = {
+        item: s.Item || '?',
+        partNumber: childPN,
+        qty: s.QTY,
+        description: (cadRecord ? cadRecord.Description : s.Description) || 'Usunięty (nie w XLSX)',
+        bomStructure: s.BOM_Structure || (cadRecord ? cadRecord.BOM_Structure : '') || '',
+        rawData: {} as any,
+        children: [],
+        parentItem: null,
+        selected: false,
+        expanded: true,
+        action: 'delete',
+        status: 'Usunięty',
+        gristId: s.Part_Number,
+        gristStructureId: s.id
+      };
+      
+      let attached = false;
+      if (s.Parent) {
+        const parentPN = cadIdToPartNumber.get(s.Parent);
+        if (parentPN) {
           const excelParent = flatNodes.find(n => n.partNumber.toString().trim().toUpperCase() === parentPN);
           if (excelParent) {
             phantomNode.parentItem = excelParent.item;
             excelParent.children.push(phantomNode);
-          } else {
-            nodes.push(phantomNode);
+            attached = true;
           }
         }
       }
+      
+      if (!attached) {
+        nodes.push(phantomNode);
+      }
+      
+      console.warn('[GRIST-BOM] Missing structure record marked for soft-delete:', childPN, 'struct id:', s.id);
     }
   }
   
