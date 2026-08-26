@@ -32,6 +32,7 @@ export interface BOMNode {
   status: string; // e.g. "Aktywny", "Usunięty"
   gristId?: number; // matched BOM_CAD id
   gristStructureId?: number; // matched BOM_struktura id
+  isHiddenByInseparableParent?: boolean; // true when an ancestor has BOM Structure = "Inseparable"
 }
 
 // Required columns for BOM file validation
@@ -255,7 +256,8 @@ function buildTree(rows: BOMRow[]): BOMNode[] {
       selected: true,
       expanded: true,
       action: 'none',
-      status: 'Aktywny'
+      status: 'Aktywny',
+      isHiddenByInseparableParent: false
     };
     
     nodeMap.set(itemStr, node);
@@ -282,6 +284,29 @@ function buildTree(rows: BOMRow[]): BOMNode[] {
       rootNodes.push(node);
     }
   }
+
+  // Mark all children (recursively) of "Inseparable" nodes as hidden.
+  // This affects both the UI tree view and the Grist sync step.
+  markInseparableChildren(rootNodes, false);
   
   return rootNodes;
+}
+
+/**
+ * Recursively walk the tree and set isHiddenByInseparableParent=true
+ * for every descendant of a node whose BOM Structure is "Inseparable".
+ *
+ * @param nodes   - array of sibling BOMNodes to process
+ * @param parentIsInseparable - whether the current subtree is already under an Inseparable ancestor
+ */
+export function markInseparableChildren(nodes: BOMNode[], parentIsInseparable: boolean): void {
+  for (const node of nodes) {
+    node.isHiddenByInseparableParent = parentIsInseparable;
+    const childrenShouldBeHidden =
+      parentIsInseparable ||
+      node.bomStructure.toLowerCase() === 'inseparable';
+    if (node.children.length > 0) {
+      markInseparableChildren(node.children, childrenShouldBeHidden);
+    }
+  }
 }

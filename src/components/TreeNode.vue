@@ -65,6 +65,8 @@ const props = withDefaults(defineProps<{
 });
 
 const isVisible = computed(() => {
+  // Never show nodes that are descendants of an "Inseparable" parent
+  if (props.node.isHiddenByInseparableParent) return false;
   return isNodeVisible(props.node, props.searchQuery);
 });
 
@@ -73,8 +75,10 @@ const isDirectMatch = computed(() => {
 });
 
 const visibleChildren = computed(() => {
-  if (!props.searchQuery || !props.searchQuery.trim()) return props.node.children;
-  return props.node.children.filter(child => isNodeVisible(child, props.searchQuery));
+  // Always filter out children marked as hidden by an Inseparable ancestor
+  const nonHidden = props.node.children.filter(child => !child.isHiddenByInseparableParent);
+  if (!props.searchQuery || !props.searchQuery.trim()) return nonHidden;
+  return nonHidden.filter(child => isNodeVisible(child, props.searchQuery));
 });
 
 const toggleExpand = () => {

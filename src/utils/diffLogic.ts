@@ -1,4 +1,5 @@
 import type { BOMNode } from './bomParser';
+import { markInseparableChildren } from './bomParser';
 import { flattenNodes, type GristBOMCADRecord, type GristBOMStrukturaRecord } from './gristApi';
 
 /**
@@ -218,6 +219,9 @@ export function calculateDiff(
       console.warn('[GRIST-BOM] Missing structure record marked for soft-delete:', childPN, 'struct id:', s.id);
     }
   }
-  
+
+  // Re-apply Inseparable hidden flag after diff (Phase 4 may have added phantom nodes).
+  markInseparableChildren(nodes, false);
+
   return nodes;
 }

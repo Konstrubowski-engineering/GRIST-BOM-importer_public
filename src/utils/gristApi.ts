@@ -453,7 +453,7 @@ export async function syncToGrist(
   }
 
   const flatNodes = flattenNodes(nodes);
-  const selectedNodes = flatNodes.filter(n => n.selected);
+  const selectedNodes = flatNodes.filter(n => n.selected && !n.isHiddenByInseparableParent);
 
   console.warn('[GRIST-BOM] Total selected nodes:', selectedNodes.length);
   selectedNodes.forEach(n => {

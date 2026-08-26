@@ -257,30 +257,35 @@ const allFlatNodes = computed(() => {
   return flattenNodes(tree.value);
 });
 
+// Nodes that are actually visible and eligible for sync (excludes children of Inseparable parents)
+const visibleFlatNodes = computed(() => {
+  return allFlatNodes.value.filter(n => !n.isHiddenByInseparableParent);
+});
+
 const totalCount = computed(() => {
-  return allFlatNodes.value.length;
+  return visibleFlatNodes.value.length;
 });
 
 const selectedCount = computed(() => {
-  return allFlatNodes.value.filter(n => n.selected).length;
+  return visibleFlatNodes.value.filter(n => n.selected).length;
 });
 
 const createCount = computed(() => {
-  return allFlatNodes.value.filter(n => n.selected && n.action === 'create').length;
+  return visibleFlatNodes.value.filter(n => n.selected && n.action === 'create').length;
 });
 
 const updateCount = computed(() => {
-  return allFlatNodes.value.filter(n => n.selected && n.action === 'update').length;
+  return visibleFlatNodes.value.filter(n => n.selected && n.action === 'update').length;
 });
 
 const deleteCount = computed(() => {
-  return allFlatNodes.value.filter(n => n.selected && n.action === 'delete').length;
+  return visibleFlatNodes.value.filter(n => n.selected && n.action === 'delete').length;
 });
 
 // Filtering & Matching computed properties
 const matchingNodes = computed(() => {
-  if (!searchQuery.value.trim()) return allFlatNodes.value;
-  return allFlatNodes.value.filter(n => nodeMatchesQuery(n, searchQuery.value));
+  if (!searchQuery.value.trim()) return visibleFlatNodes.value;
+  return visibleFlatNodes.value.filter(n => nodeMatchesQuery(n, searchQuery.value));
 });
 
 const matchingCount = computed(() => {
