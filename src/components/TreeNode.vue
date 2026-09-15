@@ -6,8 +6,10 @@
         'is-deleted': node.status === 'Usunięty', 
         'is-new': node.action === 'create', 
         'is-child': (depth || 0) > 0,
-        'is-match': isDirectMatch
+        'is-match': isDirectMatch,
+        'is-find-match': isFindMatch
       }"
+      :data-node-key="nodeKey"
     >
       <div class="col-expand">
         <button v-if="visibleChildren.length" @click="toggleExpand" class="expand-btn">
@@ -44,6 +46,8 @@
         :columnWidths="columnWidths"
         :depth="(depth || 0) + 1"
         :searchQuery="searchQuery"
+        :sortState="sortState"
+        :highlightedKey="highlightedKey"
       />
     </div>
   </div>
@@ -53,20 +57,27 @@
 import { computed } from 'vue';
 import type { BOMNode } from '../utils/bomParser';
 import { nodeMatchesQuery, isNodeVisible } from '../utils/filterUtils';
+import { sortNodeArray, type SortState } from '../utils/sortUtils';
 
 const props = withDefaults(defineProps<{
   node: BOMNode;
   columnWidths: Record<string, number>;
   depth?: number;
   searchQuery?: string;
+  sortState?: SortState;
+  highlightedKey?: string;
 }>(), {
   depth: 0,
-  searchQuery: ''
+  searchQuery: '',
+  sortState: () => ({ column: null, direction: 'asc' as const }),
+  highlightedKey: ''
 });
 
 const isVisible = computed(() => {
   // Never show nodes that are descendants of an "Inseparable" parent
   if (props.node.isHiddenByInseparableParent) return false;
+  // Never show "Reference" nodes or their descendants
+  if (props.node.isHiddenByReference) return false;
   return isNodeVisible(props.node, props.searchQuery);
 });
 
@@ -74,11 +85,21 @@ const isDirectMatch = computed(() => {
   return Boolean(props.searchQuery && props.searchQuery.trim() && nodeMatchesQuery(props.node, props.searchQuery));
 });
 
+const nodeKey = computed(() => `${props.node.item}|${props.node.partNumber}`);
+
+const isFindMatch = computed(() => {
+  return Boolean(props.highlightedKey && props.highlightedKey === nodeKey.value);
+});
+
 const visibleChildren = computed(() => {
-  // Always filter out children marked as hidden by an Inseparable ancestor
-  const nonHidden = props.node.children.filter(child => !child.isHiddenByInseparableParent);
-  if (!props.searchQuery || !props.searchQuery.trim()) return nonHidden;
-  return nonHidden.filter(child => isNodeVisible(child, props.searchQuery));
+  // Filter out children marked as hidden by an Inseparable ancestor or Reference
+  const nonHidden = props.node.children.filter(child =>
+    !child.isHiddenByInseparableParent && !child.isHiddenByReference
+  );
+  // Sort hierarchically: each level sorted independently by the same criterion
+  const sorted = sortNodeArray(nonHidden, props.sortState);
+  if (!props.searchQuery || !props.searchQuery.trim()) return sorted;
+  return sorted.filter(child => isNodeVisible(child, props.searchQuery));
 });
 
 const toggleExpand = () => {
@@ -165,6 +186,15 @@ const actionClass = computed(() => {
 
 .is-match:hover {
   background-color: rgba(59, 130, 246, 0.22);
+}
+
+.is-find-match {
+  background-color: rgba(251, 191, 36, 0.22) !important;
+  box-shadow: inset 3px 0 0 #fbbf24 !important;
+}
+
+.is-find-match:hover {
+  background-color: rgba(251, 191, 36, 0.32) !important;
 }
 
 .is-deleted {

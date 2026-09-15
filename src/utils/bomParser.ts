@@ -33,6 +33,8 @@ export interface BOMNode {
   gristId?: number; // matched BOM_CAD id
   gristStructureId?: number; // matched BOM_struktura id
   isHiddenByInseparableParent?: boolean; // true when an ancestor has BOM Structure = "Inseparable"
+  isHiddenByReference?: boolean; // true for the node itself and all descendants when BOM Structure = "Reference"
+  parentRef?: BOMNode | null; // reference to parent node (for ancestor path lookup); not serialized via JSON
 }
 
 // Required columns for BOM file validation
@@ -257,7 +259,8 @@ function buildTree(rows: BOMRow[]): BOMNode[] {
       expanded: true,
       action: 'none',
       status: 'Aktywny',
-      isHiddenByInseparableParent: false
+      isHiddenByInseparableParent: false,
+      isHiddenByReference: false
     };
     
     nodeMap.set(itemStr, node);
@@ -288,7 +291,10 @@ function buildTree(rows: BOMRow[]): BOMNode[] {
   // Mark all children (recursively) of "Inseparable" nodes as hidden.
   // This affects both the UI tree view and the Grist sync step.
   markInseparableChildren(rootNodes, false);
-  
+
+  // Mark "Reference" nodes and all their descendants as hidden.
+  markReferenceNodes(rootNodes, false);
+
   return rootNodes;
 }
 
@@ -309,4 +315,41 @@ export function markInseparableChildren(nodes: BOMNode[], parentIsInseparable: b
       markInseparableChildren(node.children, childrenShouldBeHidden);
     }
   }
+}
+
+/**
+ * Recursively walk the tree and set isHiddenByReference=true for any node
+ * whose BOM Structure is "Reference" AND all of its descendants.
+ * Unlike Inseparable (which only hides children), Reference hides the node
+ * itself as well.
+ *
+ * @param nodes         - array of sibling BOMNodes to process
+ * @param parentIsReference - whether the current subtree is already under a Reference ancestor
+ */
+export function markReferenceNodes(nodes: BOMNode[], parentIsReference: boolean): void {
+  for (const node of nodes) {
+    const isRef = parentIsReference || node.bomStructure.toLowerCase() === 'reference';
+    node.isHiddenByReference = isRef;
+    if (node.children.length > 0) {
+      markReferenceNodes(node.children, isRef);
+    }
+  }
+}
+
+/**
+ * Walk the tree and set parentRef on every child node.
+ * Must be called AFTER the tree is finalized (after calculateDiff) and AFTER
+ * any JSON deep-copy, since parentRef creates circular references that
+ * JSON.stringify cannot handle.
+ */
+export function setParentRefs(nodes: BOMNode[]): void {
+  const walk = (levelNodes: BOMNode[], parent: BOMNode | null) => {
+    for (const node of levelNodes) {
+      node.parentRef = parent;
+      if (node.children.length > 0) {
+        walk(node.children, node);
+      }
+    }
+  };
+  walk(nodes, null);
 }

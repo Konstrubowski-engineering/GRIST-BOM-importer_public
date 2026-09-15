@@ -77,6 +77,38 @@
             <div v-if="searchQuery" class="filter-count-badge">
               Znaleziono: <strong>{{ matchingCount }}</strong> / {{ totalCount }}
             </div>
+            <div class="find-box">
+              <input 
+                v-model="findQuery"
+                @keydown="onFindKeydown"
+                type="text"
+                class="find-input"
+                placeholder="Szukaj pozycji..."
+                :disabled="isSyncing"
+                title="Znajdź pozycję (Enter = następny, Shift+Enter = poprzedni)"
+              />
+              <button 
+                v-if="findQuery"
+                @click="prevMatch"
+                class="find-nav-btn"
+                title="Poprzedni (Shift+Enter)"
+                :disabled="matchList.length === 0"
+              >‹</button>
+              <span v-if="findQuery" class="find-counter">{{ matchCountText }}</span>
+              <button 
+                v-if="findQuery"
+                @click="nextMatch"
+                class="find-nav-btn"
+                title="Następny (Enter)"
+                :disabled="matchList.length === 0"
+              >›</button>
+              <button 
+                v-if="findQuery"
+                @click="clearFind"
+                class="search-clear-btn find-clear-btn"
+                title="Wyczyść"
+              >✕</button>
+            </div>
             <div class="toolbar-tree-actions">
               <button @click="expandAll" class="btn btn-sm btn-outline" title="Rozwiń wszystkie gałęzie">Rozwiń</button>
               <button @click="collapseAll" class="btn btn-sm btn-outline" title="Zwiń wszystkie gałęzie">Zwiń</button>
@@ -108,28 +140,30 @@
               />
               <div class="resize-handle" @mousedown="startResize('col-check', $event)"></div>
             </div>
-            <div class="col-item">Item<div class="resize-handle" @mousedown="startResize('col-item', $event)"></div></div>
-            <div class="col-part">Part Number<div class="resize-handle" @mousedown="startResize('col-part', $event)"></div></div>
-            <div class="col-bom-struct">BOM Structure<div class="resize-handle" @mousedown="startResize('col-bom-struct', $event)"></div></div>
-            <div class="col-qty">QTY<div class="resize-handle" @mousedown="startResize('col-qty', $event)"></div></div>
-            <div class="col-desc">Description<div class="resize-handle" @mousedown="startResize('col-desc', $event)"></div></div>
-            <div class="col-stock">Stock Number<div class="resize-handle" @mousedown="startResize('col-stock', $event)"></div></div>
-            <div class="col-rev">REV<div class="resize-handle" @mousedown="startResize('col-rev', $event)"></div></div>
-            <div class="col-material">Material<div class="resize-handle" @mousedown="startResize('col-material', $event)"></div></div>
-            <div class="col-appearance">Appearance<div class="resize-handle" @mousedown="startResize('col-appearance', $event)"></div></div>
-            <div class="col-mass">Mass<div class="resize-handle" @mousedown="startResize('col-mass', $event)"></div></div>
-            <div class="col-vendor">Vendor<div class="resize-handle" @mousedown="startResize('col-vendor', $event)"></div></div>
+            <div class="col-item sortable-header" @click="toggleSort('item')">Item<span class="sort-indicator">{{ sortIndicator('item') }}</span><div class="resize-handle" @mousedown="startResize('col-item', $event)"></div></div>
+            <div class="col-part sortable-header" @click="toggleSort('partNumber')">Part Number<span class="sort-indicator">{{ sortIndicator('partNumber') }}</span><div class="resize-handle" @mousedown="startResize('col-part', $event)"></div></div>
+            <div class="col-bom-struct sortable-header" @click="toggleSort('bomStructure')">BOM Structure<span class="sort-indicator">{{ sortIndicator('bomStructure') }}</span><div class="resize-handle" @mousedown="startResize('col-bom-struct', $event)"></div></div>
+            <div class="col-qty sortable-header" @click="toggleSort('qty')">QTY<span class="sort-indicator">{{ sortIndicator('qty') }}</span><div class="resize-handle" @mousedown="startResize('col-qty', $event)"></div></div>
+            <div class="col-desc sortable-header" @click="toggleSort('description')">Description<span class="sort-indicator">{{ sortIndicator('description') }}</span><div class="resize-handle" @mousedown="startResize('col-desc', $event)"></div></div>
+            <div class="col-stock sortable-header" @click="toggleSort('stock')">Stock Number<span class="sort-indicator">{{ sortIndicator('stock') }}</span><div class="resize-handle" @mousedown="startResize('col-stock', $event)"></div></div>
+            <div class="col-rev sortable-header" @click="toggleSort('rev')">REV<span class="sort-indicator">{{ sortIndicator('rev') }}</span><div class="resize-handle" @mousedown="startResize('col-rev', $event)"></div></div>
+            <div class="col-material sortable-header" @click="toggleSort('material')">Material<span class="sort-indicator">{{ sortIndicator('material') }}</span><div class="resize-handle" @mousedown="startResize('col-material', $event)"></div></div>
+            <div class="col-appearance sortable-header" @click="toggleSort('appearance')">Appearance<span class="sort-indicator">{{ sortIndicator('appearance') }}</span><div class="resize-handle" @mousedown="startResize('col-appearance', $event)"></div></div>
+            <div class="col-mass sortable-header" @click="toggleSort('mass')">Mass<span class="sort-indicator">{{ sortIndicator('mass') }}</span><div class="resize-handle" @mousedown="startResize('col-mass', $event)"></div></div>
+            <div class="col-vendor sortable-header" @click="toggleSort('vendor')">Vendor<span class="sort-indicator">{{ sortIndicator('vendor') }}</span><div class="resize-handle" @mousedown="startResize('col-vendor', $event)"></div></div>
             <div class="col-action">Akcja<div class="resize-handle" @mousedown="startResize('col-action', $event)"></div></div>
           </div>
 
           <div class="tree-body">
             <TreeNode 
-              v-for="node in tree" 
+              v-for="node in displayTree" 
               :key="node.item + node.partNumber" 
               :node="node" 
               :columnWidths="columnWidths"
               :depth="0"
               :searchQuery="searchQuery"
+              :sortState="sortState"
+              :highlightedKey="highlightedKey"
             />
             <div v-if="searchQuery && matchingCount === 0" class="no-results-message">
               Brak pozycji pasujących do frazy: <strong>"{{ searchQuery }}"</strong>
@@ -199,9 +233,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue';
+import { ref, onMounted, watch, computed, nextTick } from 'vue';
 import TreeNode from './components/TreeNode.vue';
-import { parseBOMFile, type BOMNode } from './utils/bomParser';
+import { parseBOMFile, setParentRefs, type BOMNode } from './utils/bomParser';
 import { 
   initGristApi, 
   fetchGristData, 
@@ -214,6 +248,8 @@ import {
 } from './utils/gristApi';
 import { calculateDiff } from './utils/diffLogic';
 import { nodeMatchesQuery, hasMatchingDescendant } from './utils/filterUtils';
+import { sortNodeArray, type SortState, type SortColumn } from './utils/sortUtils';
+import { findAllMatches, expandAncestors, scrollNodeIntoView } from './utils/searchUtils';
 
 // State
 const tree = ref<BOMNode[]>([]);
@@ -227,6 +263,14 @@ const fileData = ref<BOMNode[]>([]); // Store parsed file data for refresh
 const validationErrors = ref<string[]>([]);
 const validationWarnings = ref<string[]>([]);
 const searchQuery = ref('');
+
+// Sort state (view-only, does not modify tree data)
+const sortState = ref<SortState>({ column: null, direction: 'asc' });
+
+// "Szukaj pozycji" (navigation, not filter)
+const findQuery = ref('');
+const matchList = ref<BOMNode[]>([]);
+const matchIndex = ref(-1);
 
 // Column widths state
 const columnWidths = ref<Record<string, number>>({
@@ -257,9 +301,9 @@ const allFlatNodes = computed(() => {
   return flattenNodes(tree.value);
 });
 
-// Nodes that are actually visible and eligible for sync (excludes children of Inseparable parents)
+// Nodes that are actually visible and eligible for sync (excludes children of Inseparable parents and Reference nodes)
 const visibleFlatNodes = computed(() => {
-  return allFlatNodes.value.filter(n => !n.isHiddenByInseparableParent);
+  return allFlatNodes.value.filter(n => !n.isHiddenByInseparableParent && !n.isHiddenByReference);
 });
 
 const totalCount = computed(() => {
@@ -291,6 +335,101 @@ const matchingNodes = computed(() => {
 const matchingCount = computed(() => {
   return matchingNodes.value.length;
 });
+
+// Sorted top-level tree for display (children sorted inside TreeNode)
+const displayTree = computed(() => {
+  return sortNodeArray(tree.value, sortState.value);
+});
+
+// Sort indicator for a column header
+const sortIndicator = (column: SortColumn): string => {
+  if (sortState.value.column !== column) return '';
+  return sortState.value.direction === 'asc' ? ' ▲' : ' ▼';
+};
+
+// Toggle sort: asc → desc → off → asc ...
+const toggleSort = (column: SortColumn) => {
+  if (sortState.value.column !== column) {
+    sortState.value = { column, direction: 'asc' };
+  } else if (sortState.value.direction === 'asc') {
+    sortState.value = { column, direction: 'desc' };
+  } else {
+    sortState.value = { column: null, direction: 'asc' };
+  }
+};
+
+// "Szukaj pozycji" — current match node
+const currentMatch = computed<BOMNode | null>(() => {
+  if (matchIndex.value < 0 || matchIndex.value >= matchList.value.length) return null;
+  return matchList.value[matchIndex.value];
+});
+
+// Key for highlighting in TreeNode
+const highlightedKey = computed(() => {
+  const m = currentMatch.value;
+  if (!m) return '';
+  return `${m.item}|${m.partNumber}`;
+});
+
+const matchCountText = computed(() => {
+  if (!findQuery.value.trim()) return '';
+  if (matchList.value.length === 0) return '0/0';
+  return `${matchIndex.value + 1}/${matchList.value.length}`;
+});
+
+const executeFind = () => {
+  const q = findQuery.value.trim();
+  if (!q) {
+    matchList.value = [];
+    matchIndex.value = -1;
+    return;
+  }
+  matchList.value = findAllMatches(visibleFlatNodes.value, q);
+  if (matchList.value.length > 0) {
+    matchIndex.value = 0;
+    navigateToMatch();
+  } else {
+    matchIndex.value = -1;
+  }
+};
+
+const navigateToMatch = () => {
+  const m = currentMatch.value;
+  if (!m) return;
+  expandAncestors(m);
+  nextTick(() => {
+    scrollNodeIntoView(`${m.item}|${m.partNumber}`);
+  });
+};
+
+const nextMatch = () => {
+  if (matchList.value.length === 0) return;
+  matchIndex.value = (matchIndex.value + 1) % matchList.value.length;
+  navigateToMatch();
+};
+
+const prevMatch = () => {
+  if (matchList.value.length === 0) return;
+  matchIndex.value = (matchIndex.value - 1 + matchList.value.length) % matchList.value.length;
+  navigateToMatch();
+};
+
+const onFindKeydown = (e: KeyboardEvent) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (e.shiftKey) {
+      prevMatch();
+    } else {
+      nextMatch();
+    }
+  }
+};
+
+const clearFind = () => {
+  findQuery.value = '';
+  matchList.value = [];
+  matchIndex.value = -1;
+};
 
 // Global checkbox computed properties & actions
 const isAllVisibleSelected = computed(() => {
@@ -348,6 +487,18 @@ watch(searchQuery, (newQuery) => {
       }
     };
     expandMatchingParents(tree.value);
+  }
+});
+
+// Re-execute find when query changes
+watch(findQuery, () => {
+  executeFind();
+});
+
+// Re-execute find when tree is rebuilt (e.g. after refreshActions)
+watch(tree, () => {
+  if (findQuery.value.trim()) {
+    executeFind();
   }
 });
 
@@ -533,6 +684,7 @@ const refreshActions = async () => {
     console.warn('[GRIST-BOM] gristData.cad length:', gristData.cad?.length || 0);
     console.warn('[GRIST-BOM] gristData.struct length:', gristData.struct?.length || 0);
     tree.value = calculateDiff(fileData.value, gristData.cad, gristData.struct, projektId.value);
+    setParentRefs(tree.value);
     console.warn('[GRIST-BOM] Actions refreshed for projektId:', projektId.value, 'Tree nodes:', tree.value.length);
   } catch (err: any) {
     console.error('[GRIST-BOM] Failed to refresh actions:', err);
@@ -556,6 +708,10 @@ const reset = () => {
   validationErrors.value = [];
   validationWarnings.value = [];
   searchQuery.value = '';
+  findQuery.value = '';
+  matchList.value = [];
+  matchIndex.value = -1;
+  sortState.value = { column: null, direction: 'asc' };
 };
 
 const confirmSync = async () => {
@@ -832,6 +988,83 @@ body, html {
 
 .filter-count-badge strong {
   color: #60a5fa;
+}
+
+.find-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 320px;
+}
+
+.find-input {
+  width: 100%;
+  padding: 6px 10px;
+  background-color: #0f172a;
+  color: var(--text-main);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.find-input:focus {
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.2);
+}
+
+.find-nav-btn {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.find-nav-btn:hover:not(:disabled) {
+  background: rgba(251, 191, 36, 0.3);
+}
+
+.find-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.find-counter {
+  font-size: 0.75rem;
+  color: #fbbf24;
+  white-space: nowrap;
+  min-width: 36px;
+  text-align: center;
+}
+
+.find-clear-btn {
+  position: static;
+}
+
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+}
+
+.sortable-header:hover {
+  color: var(--text-main);
+}
+
+.sort-indicator {
+  font-size: 10px;
+  color: var(--primary);
+  margin-left: 2px;
 }
 
 .toolbar-tree-actions {

@@ -1,5 +1,5 @@
 import type { BOMNode } from './bomParser';
-import { markInseparableChildren } from './bomParser';
+import { markInseparableChildren, markReferenceNodes } from './bomParser';
 import { flattenNodes, type GristBOMCADRecord, type GristBOMStrukturaRecord } from './gristApi';
 
 /**
@@ -220,8 +220,9 @@ export function calculateDiff(
     }
   }
 
-  // Re-apply Inseparable hidden flag after diff (Phase 4 may have added phantom nodes).
+  // Re-apply hidden flags after diff (Phase 4 may have added phantom nodes).
   markInseparableChildren(nodes, false);
+  markReferenceNodes(nodes, false);
 
   return nodes;
 }
