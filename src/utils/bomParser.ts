@@ -206,6 +206,7 @@ export async function parseBOMFile(file: File): Promise<{ nodes: BOMNode[]; vali
     const bomStructure = getField('BOM Structure') || getField('BOM_Structure') || getField('BOMStructure');
 
     return {
+      ...standardizedRow,
       Item: getField('Item'),
       PartNumber: getField('Part Number'),
       QTY: qty,
@@ -217,8 +218,7 @@ export async function parseBOMFile(file: File): Promise<{ nodes: BOMNode[]; vali
       Mass: getField('Mass'),
       Vendor: getField('Vendor'),
       Producent: getField('Producent') || getField('Manufacturer'),
-      BOM_Structure: bomStructure,
-      ...standardizedRow
+      BOM_Structure: bomStructure
     };
   }).filter(r => r.Item && r.PartNumber); // Skip empty rows
 
